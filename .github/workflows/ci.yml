@@ -27,3 +27,10 @@ jobs:
           cache: maven
       - name: Verify
         run: mvn -B -ntp clean verify
+      - name: Inspect packaged artifacts
+        run: |
+          test -f target/openai-compatible-contract-junit-0.1.0-sources.jar
+          test -f target/openai-compatible-contract-junit-0.1.0-javadoc.jar
+          jar tf target/openai-compatible-contract-junit-0.1.0.jar | grep -Fxq META-INF/LICENSE
+          unzip -p target/openai-compatible-contract-junit-0.1.0.jar META-INF/MANIFEST.MF \
+            | grep -Fxq 'Automatic-Module-Name: dev.airouter.contract'

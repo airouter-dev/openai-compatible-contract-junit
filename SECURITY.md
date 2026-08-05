@@ -21,6 +21,7 @@ the public issue tracker.
 - Credentials are read only from a caller-controlled environment/property.
 - Reports redact credentials and never retain raw response bodies.
 - The default check is read-only /v1/models.
-- Chat and SSE probes are opt-in and have bounded response sizes and timeouts.
+- Chat and SSE probes are opt-in and have bounded response sizes and a total
+  deadline that includes response-body delivery.
 - Release signing keys and Central Portal credentials must stay outside this
   directory and outside source control.

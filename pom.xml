@@ -51,6 +51,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <project.build.outputTimestamp>2026-08-05T18:00:00Z</project.build.outputTimestamp>
     <maven.compiler.release>17</maven.compiler.release>
     <maven.compiler.parameters>true</maven.compiler.parameters>
     <junit.version>5.14.4</junit.version>
@@ -86,6 +87,18 @@
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>${project.basedir}</directory>
+        <includes>
+          <include>LICENSE</include>
+        </includes>
+        <targetPath>META-INF</targetPath>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -110,6 +123,18 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.5.0</version>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Automatic-Module-Name>dev.airouter.contract</Automatic-Module-Name>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
         <version>3.4.0</version>
         <executions>
@@ -126,6 +151,7 @@
         <version>3.12.0</version>
         <configuration>
           <doclint>none</doclint>
+          <notimestamp>true</notimestamp>
           <quiet>true</quiet>
         </configuration>
         <executions>

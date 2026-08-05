@@ -1,11 +1,12 @@
 package dev.airouter.contract;
 
+import com.fasterxml.jackson.core.io.JsonStringEncoder;
+
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 
 /**
@@ -121,25 +122,24 @@ public final class ContractRunner {
             ContractHttpResponse response,
             String expected,
             String name) throws ContractViolationException {
-        String contentType = response.contentType().toLowerCase(Locale.ROOT);
-        if (!contentType.startsWith(expected)) {
+        String contentType = response.contentType();
+        int parameters = contentType.indexOf(';');
+        String mediaType = (parameters < 0 ? contentType : contentType.substring(0, parameters))
+                .trim();
+        if (!mediaType.equalsIgnoreCase(expected)) {
             throw new ContractViolationException(
                     name + " returned an unexpected content type");
         }
     }
 
-    private String chatBody(boolean stream) {
+    String chatBody(boolean stream) {
         return "{\"model\":\"" + jsonEscape(config.model())
                 + "\",\"messages\":[{\"role\":\"user\",\"content\":\"contract probe\"}]"
                 + ",\"max_tokens\":1,\"stream\":" + stream + "}";
     }
 
     private static String jsonEscape(String value) {
-        return value
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\r", "\\r")
-                .replace("\n", "\\n");
+        return new String(JsonStringEncoder.getInstance().quoteAsString(value));
     }
 
     @FunctionalInterface

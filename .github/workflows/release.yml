@@ -47,8 +47,17 @@ jobs:
           test "$(git describe --tags --exact-match)" = "$RELEASE_TAG"
           pom_version="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)"
           test "v${pom_version}" = "$RELEASE_TAG"
+          scm_tag="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.scm.tag)"
+          test "$scm_tag" = "$RELEASE_TAG"
       - name: Clean verification
         run: mvn -B -ntp clean verify
+      - name: Inspect packaged artifacts
+        run: |
+          test -f target/openai-compatible-contract-junit-0.1.0-sources.jar
+          test -f target/openai-compatible-contract-junit-0.1.0-javadoc.jar
+          jar tf target/openai-compatible-contract-junit-0.1.0.jar | grep -Fxq META-INF/LICENSE
+          unzip -p target/openai-compatible-contract-junit-0.1.0.jar META-INF/MANIFEST.MF \
+            | grep -Fxq 'Automatic-Module-Name: dev.airouter.contract'
       - name: Upload user-managed Central deployment
         run: mvn -B -ntp -Prelease deploy
         env:

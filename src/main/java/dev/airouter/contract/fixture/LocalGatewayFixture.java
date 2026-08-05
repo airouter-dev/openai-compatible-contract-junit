@@ -157,7 +157,19 @@ public final class LocalGatewayFixture implements AutoCloseable {
         byte[] body = response.body();
         exchange.sendResponseHeaders(response.status(), body.length);
         try (var output = exchange.getResponseBody()) {
-            output.write(body);
+            if (!response.bodyDelay().isZero()) {
+                try {
+                    Thread.sleep(response.bodyDelay().toMillis());
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+            try {
+                output.write(body);
+            } catch (IOException ignored) {
+                // A timeout test may intentionally close the client connection.
+            }
         }
     }
 
@@ -243,8 +255,14 @@ public final class LocalGatewayFixture implements AutoCloseable {
         private final String contentType;
         private final byte[] body;
         private final Duration delay;
+        private final Duration bodyDelay;
 
-        private Response(int status, String contentType, byte[] body, Duration delay) {
+        private Response(
+                int status,
+                String contentType,
+                byte[] body,
+                Duration delay,
+                Duration bodyDelay) {
             if (status < 100 || status > 599) {
                 throw new IllegalArgumentException("status must be a valid HTTP status");
             }
@@ -252,8 +270,9 @@ public final class LocalGatewayFixture implements AutoCloseable {
             this.contentType = Objects.requireNonNull(contentType, "contentType");
             this.body = Objects.requireNonNull(body, "body").clone();
             this.delay = Objects.requireNonNull(delay, "delay");
-            if (delay.isNegative()) {
-                throw new IllegalArgumentException("delay must not be negative");
+            this.bodyDelay = Objects.requireNonNull(bodyDelay, "bodyDelay");
+            if (delay.isNegative() || bodyDelay.isNegative()) {
+                throw new IllegalArgumentException("delays must not be negative");
             }
         }
 
@@ -301,6 +320,7 @@ public final class LocalGatewayFixture implements AutoCloseable {
         public static Response text(int status, String contentType, String body) {
             return new Response(status, contentType,
                     Objects.requireNonNull(body, "body").getBytes(StandardCharsets.UTF_8),
+                    Duration.ZERO,
                     Duration.ZERO);
         }
 
@@ -311,7 +331,17 @@ public final class LocalGatewayFixture implements AutoCloseable {
          * @return a new response
          */
         public Response withDelay(Duration delay) {
-            return new Response(status, contentType, body, delay);
+            return new Response(status, contentType, body, delay, bodyDelay);
+        }
+
+        /**
+         * Adds a fixed delay after response headers and before the body.
+         *
+         * @param delay body delay
+         * @return a new response
+         */
+        public Response withBodyDelay(Duration delay) {
+            return new Response(status, contentType, body, this.delay, delay);
         }
 
         private int status() {
@@ -328,6 +358,10 @@ public final class LocalGatewayFixture implements AutoCloseable {
 
         private Duration delay() {
             return delay;
+        }
+
+        private Duration bodyDelay() {
+            return bodyDelay;
         }
     }
 }

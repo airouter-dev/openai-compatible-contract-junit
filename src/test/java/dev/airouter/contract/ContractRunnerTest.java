@@ -1,9 +1,14 @@
 package dev.airouter.contract;
 
+import com.sun.net.httpserver.HttpServer;
 import dev.airouter.contract.fixture.LocalGatewayFixture;
 import org.junit.jupiter.api.Test;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -114,6 +119,120 @@ class ContractRunnerTest {
 
             assertFalse(report.passed());
             assertFalse(report.summary().contains("private detail"));
+        }
+    }
+
+    @Test
+    void contentTypeRequiresAnExactMediaTypeButAllowsParameters() throws Exception {
+        String models = "{\"data\":[{\"id\":\"fixture-model\"}]}";
+        try (LocalGatewayFixture fixture = LocalGatewayFixture.builder()
+                .models(LocalGatewayFixture.Response.text(
+                        200, "application/json; charset=utf-8", models))
+                .build()) {
+            ContractReport report = new ContractRunner(
+                    ContractConfig.builder(fixture.apiRoot()).build()).run();
+            assertTrue(report.passed(), report.summary());
+        }
+
+        try (LocalGatewayFixture fixture = LocalGatewayFixture.builder()
+                .models(LocalGatewayFixture.Response.text(
+                        200, "application/jsonevil", models))
+                .build()) {
+            ContractReport report = new ContractRunner(
+                    ContractConfig.builder(fixture.apiRoot()).build()).run();
+            assertFalse(report.passed());
+            assertEquals(ContractCheckResult.Status.FAILED, report.checks().get(0).status());
+        }
+
+        try (LocalGatewayFixture fixture = LocalGatewayFixture.builder()
+                .streaming(LocalGatewayFixture.Response.text(
+                        200, "text/event-streaming", "data: [DONE]\n\n"))
+                .build()) {
+            ContractReport report = new ContractRunner(
+                    ContractConfig.builder(fixture.apiRoot())
+                            .runStreaming(true)
+                            .build()).run();
+            assertFalse(report.passed());
+            assertEquals(ContractCheckResult.Status.FAILED, report.checks().get(2).status());
+        }
+    }
+
+    @Test
+    void chatBodyEscapesEveryJsonControlCharacter() {
+        StringBuilder controls = new StringBuilder("model-");
+        for (char value = 0; value < 0x20; value++) {
+            controls.append(value);
+        }
+        controls.append("-end");
+
+        ContractConfig config = ContractConfig.builder("https://example.invalid/v1/")
+                .model(controls.toString())
+                .build();
+        String body = new ContractRunner(config).chatBody(false);
+
+        assertTrue(JsonContract.isValidJson(body.getBytes(StandardCharsets.UTF_8)));
+        assertFalse(body.contains("\u0000"));
+    }
+
+    @Test
+    void timeoutAndHttpErrorDetailsRemainSanitized() throws Exception {
+        String secret = "provider-body-secret";
+        try (LocalGatewayFixture fixture = LocalGatewayFixture.builder()
+                .models(LocalGatewayFixture.Response.text(500, secret))
+                .build()) {
+            ContractReport report = new ContractRunner(
+                    ContractConfig.builder(fixture.apiRoot()).build()).run();
+            assertFalse(report.passed());
+            assertTrue(report.summary().contains("HTTP 500"));
+            assertFalse(report.summary().contains(secret));
+        }
+
+        try (LocalGatewayFixture fixture = LocalGatewayFixture.builder()
+                .models(LocalGatewayFixture.Response.json(
+                        200, "{\"data\":[{\"id\":\"slow\"}]}")
+                        .withBodyDelay(Duration.ofSeconds(5)))
+                .build()) {
+            long started = System.nanoTime();
+            ContractReport report = new ContractRunner(
+                    ContractConfig.builder(fixture.apiRoot())
+                            .timeout(Duration.ofMillis(200))
+                            .build()).run();
+            Duration elapsed = Duration.ofNanos(System.nanoTime() - started);
+            assertFalse(report.passed());
+            assertTrue(report.summary().contains("request timed out"));
+            assertTrue(elapsed.compareTo(Duration.ofSeconds(2)) < 0, elapsed.toString());
+        }
+    }
+
+    @Test
+    void clientRefusesRedirects() throws Exception {
+        AtomicInteger redirectedRequests = new AtomicInteger();
+        HttpServer server = HttpServer.create(
+                new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+        server.createContext("/v1/models", exchange -> {
+            exchange.getResponseHeaders().set("Location", "/v1/redirected");
+            exchange.sendResponseHeaders(302, -1);
+            exchange.close();
+        });
+        server.createContext("/v1/redirected", exchange -> {
+            redirectedRequests.incrementAndGet();
+            byte[] body = "{\"data\":[{\"id\":\"redirected\"}]}"
+                    .getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        try {
+            String root = "http://127.0.0.1:" + server.getAddress().getPort() + "/v1/";
+            ContractReport report = new ContractRunner(
+                    ContractConfig.builder(root).build()).run();
+            assertFalse(report.passed());
+            assertTrue(report.summary().contains("HTTP 302"));
+            assertEquals(0, redirectedRequests.get());
+        } finally {
+            server.stop(0);
         }
     }
 }

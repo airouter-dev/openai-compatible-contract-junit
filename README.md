@@ -74,10 +74,11 @@ to decide whether a request is safe.
 
 ## Configuration and safety boundaries
 
-ContractConfig has bounded response and event sizes, a connect/request timeout,
-and a redirect policy of NEVER. The extension resolves a bearer token only at
-request time from the configured property/environment name. It does not print
-the token, prompt, or response body.
+ContractConfig has bounded response and event sizes, a total per-request
+deadline that includes response-body delivery, and a redirect policy of NEVER.
+The extension resolves a bearer token only at request time from the configured
+property/environment name. It does not print the token, prompt, or response
+body.
 
 The check intentionally does not retry. A retry policy must be owned by the
 application because a contract probe cannot prove that a provider operation is
@@ -135,7 +136,7 @@ builds do not sign or upload anything. Portal credentials and private signing
 material remain outside the repository.
 
 The 2026-08-06 release-candidate audit used Apache Maven 3.9.16 to run clean
-builds on Java 17 and Java 21. All 12 JUnit tests passed on both runtimes, and
+builds on Java 17 and Java 21. All 19 JUnit tests passed on both runtimes, and
 both builds generated the main, sources, and Javadoc JARs. This is build
 evidence, not Maven Central publication or third-party adoption evidence.
 
