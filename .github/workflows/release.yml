@@ -29,6 +29,13 @@ jobs:
         with:
           ref: ${{ inputs.release_tag }}
           persist-credentials: false
+      - name: Select Maven launcher
+        run: |
+          if [[ -x ./mvnw ]]; then
+            echo 'MVN_CMD=./mvnw' >> "$GITHUB_ENV"
+          else
+            echo 'MVN_CMD=mvn' >> "$GITHUB_ENV"
+          fi
       - name: Set up Java and release credentials
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
@@ -45,12 +52,12 @@ jobs:
           RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           test "$(git describe --tags --exact-match)" = "$RELEASE_TAG"
-          pom_version="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)"
+          pom_version="$($MVN_CMD -q -DforceStdout help:evaluate -Dexpression=project.version)"
           test "v${pom_version}" = "$RELEASE_TAG"
-          scm_tag="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.scm.tag)"
+          scm_tag="$($MVN_CMD -q -DforceStdout help:evaluate -Dexpression=project.scm.tag)"
           test "$scm_tag" = "$RELEASE_TAG"
       - name: Clean verification
-        run: mvn -B -ntp clean verify
+        run: $MVN_CMD -B -ntp clean verify
       - name: Inspect packaged artifacts
         run: |
           test -f target/openai-compatible-contract-junit-0.1.0-sources.jar
@@ -59,7 +66,7 @@ jobs:
           unzip -p target/openai-compatible-contract-junit-0.1.0.jar META-INF/MANIFEST.MF \
             | grep -Fq 'Automatic-Module-Name: dev.airouter.contract'
       - name: Upload user-managed Central deployment
-        run: mvn -B -ntp -Prelease deploy
+        run: $MVN_CMD -B -ntp -Prelease deploy
         env:
           CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}

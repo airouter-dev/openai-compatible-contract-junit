@@ -41,8 +41,8 @@ repository.
 The release workflow checks out an immutable tag and runs:
 
 ~~~
-mvn -B -ntp clean verify
-mvn -B -ntp -Prelease deploy
+./mvnw -B -ntp clean verify
+./mvnw -B -ntp -Prelease deploy
 ~~~
 
 The Central plugin is configured with `autoPublish=false` and waits for

@@ -26,7 +26,7 @@ jobs:
           java-version: ${{ matrix.java }}
           cache: maven
       - name: Verify
-        run: mvn -B -ntp clean verify
+        run: ./mvnw -B -ntp clean verify
       - name: Inspect packaged artifacts
         run: |
           test -f target/openai-compatible-contract-junit-0.1.0-sources.jar

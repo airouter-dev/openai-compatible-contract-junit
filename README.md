@@ -63,7 +63,7 @@ class GatewayContractTest {
 For a local run:
 
 ~~~
-mvn -Dcontract.base-uri=http://127.0.0.1:8080/v1 \
+./mvnw -Dcontract.base-uri=http://127.0.0.1:8080/v1 \
     -Dcontract.model=test-model \
     test
 ~~~
@@ -125,9 +125,9 @@ The scaffold targets Java 17 bytecode and is tested on Java 17 and Java 21. It
 uses JUnit Jupiter 5.14.4 and Jackson Core 2.22.1, both pinned in the POM.
 
 ~~~
-mvn -B -ntp clean verify
-mvn -B -ntp package
-mvn -B -ntp javadoc:javadoc
+./mvnw -B -ntp clean verify
+./mvnw -B -ntp package
+./mvnw -B -ntp javadoc:javadoc
 ~~~
 
 `package` attaches source and Javadoc JARs. The `release` Maven profile adds PGP
