@@ -1,0 +1,57 @@
+name: Maven Central release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Immutable release tag, for example v0.1.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: maven-central
+    steps:
+      - name: Validate release tag
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "release_tag must be an immutable vMAJOR.MINOR.PATCH tag" >&2
+            exit 1
+          fi
+      - name: Check out release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.release_tag }}
+          persist-credentials: false
+      - name: Set up Java and release credentials
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          server-id: central
+          server-username: CENTRAL_USERNAME
+          server-password: CENTRAL_PASSWORD
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+      - name: Verify tag and POM version
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          test "$(git describe --tags --exact-match)" = "$RELEASE_TAG"
+          pom_version="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)"
+          test "v${pom_version}" = "$RELEASE_TAG"
+      - name: Clean verification
+        run: mvn -B -ntp clean verify
+      - name: Upload user-managed Central deployment
+        run: mvn -B -ntp -Prelease deploy
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
