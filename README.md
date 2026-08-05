@@ -139,6 +139,18 @@ builds on Java 17 and Java 21. All 12 JUnit tests passed on both runtimes, and
 both builds generated the main, sources, and Javadoc JARs. This is build
 evidence, not Maven Central publication or third-party adoption evidence.
 
+## Release integrity
+
+Release artifacts are signed by `AI ROUTER Maven Releases
+<developer@ai-router.dev>` with this OpenPGP fingerprint:
+
+~~~
+424D 95E1 4D48 4268 F13F  0719 6EBA 89CA FFC0 E0D8
+~~~
+
+The public key is distributed through `keyserver.ubuntu.com`. Compare the full
+fingerprint before trusting a downloaded key or signature.
+
 ## Boundaries and non-claims
 
 This project does not claim to be an official OpenAI, Anthropic, Sonatype,

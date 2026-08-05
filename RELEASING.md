@@ -49,5 +49,14 @@ The Central plugin is configured with `autoPublish=false` and waits for
 `VALIDATED`. Inspect the POM, main JAR, sources JAR, Javadoc JAR, signatures,
 and checksums in Central Portal before clicking Publish.
 
+The release signing key fingerprint is:
+
+~~~
+424D 95E1 4D48 4268 F13F  0719 6EBA 89CA FFC0 E0D8
+~~~
+
+Confirm that every detached signature resolves to this full fingerprint. The
+key expires in August 2028 and must be extended and redistributed before then.
+
 Published versions are immutable. A defect requires a new version rather than
 rewriting or replacing an existing coordinate.
