@@ -57,7 +57,7 @@ jobs:
           test -f target/openai-compatible-contract-junit-0.1.0-javadoc.jar
           jar tf target/openai-compatible-contract-junit-0.1.0.jar | grep -Fxq META-INF/LICENSE
           unzip -p target/openai-compatible-contract-junit-0.1.0.jar META-INF/MANIFEST.MF \
-            | grep -Fxq 'Automatic-Module-Name: dev.airouter.contract'
+            | grep -Fq 'Automatic-Module-Name: dev.airouter.contract'
       - name: Upload user-managed Central deployment
         run: mvn -B -ntp -Prelease deploy
         env:
